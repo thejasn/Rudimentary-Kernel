@@ -18,7 +18,7 @@
 #define PIC2_DATA 0xA1
 #define PIC2_COMMAND 0xA0
 
-#define ENTRY_KEY_CODE 0x1C
+#define ENTER_KEY_CODE 0x1C
 
 extern unsigned char keymap[128];
 extern void keyboard_handler(void);
@@ -33,7 +33,7 @@ struct IDT_entry{
     unsigned short int offset_lowerbits; //offset of bits 0...15
     //offset represents the address of the entry point of the ISR
     unsigned short int selector; // a code segment in GDT 
-    unsigned int zero; //reserved
+    unsigned char zero; //reserved
     unsigned char type_attr;
     unsigned short int offset_higherbits; //offset of bits 16...31
    
@@ -79,6 +79,7 @@ void init_idt(void)
     ICW3 is how the PICs are wired as master/slaves
     ICW4 additional ifo on environment
     */
+    
     //ICW1 init
     write_to_port(PIC1_COMMAND,0x11);
     write_to_port(PIC2_COMMAND,0x11);
@@ -107,10 +108,9 @@ void init_idt(void)
     
     // fill the IDT
 
-    idt_address = (unsigned long)IDT;
-    idt_ptr[0] = (sizeof(IDT_entry)*IDT_SIZE)+((idt_address & 0xffff)<<16);
-    idt_ptr[1] = idt_address >> 16;
-
+    idt_address = (unsigned long)IDT ;
+	idt_ptr[0] = (sizeof (struct IDT_entry) * IDT_SIZE) + ((idt_address & 0xffff) << 16);
+	idt_ptr[1] = idt_address >> 16 ;
     //call load IDT from asm
     load_idt(idt_ptr);
 
@@ -145,34 +145,36 @@ void kprint(const char *str)
 }*/
 void keyboard_handler_main(void)
 {
-    unsigned char status;
-    char keycode;
+	unsigned char status;
+	char keycode;
 
-    write_to_port(0x20,0x20);
+	/* write EOI */
+	write_to_port(0x20, 0x20);
 
-    status = read_from_port(K_STATUS_PORT);
-    // lowest bit of status will be set if buffer is not empty
-    if (status & 0x01)
-    {
-            keycode = read_from_port(K_DATA_PORT);
-            if(keycode < 0)
-                return;
-            if(keycode == ENTRY_KEY_CODE)
-            {
-                kprint_newline();
-                return;
-            }
-         terminal_putchar(keyboard_map[(unsigned char)keycode]);
-         terminal_putchar(' ');
-        
-    }
+	status = read_from_port(0x64);
+	/* Lowest bit of status will be set if buffer is not empty */
+	if (status & 0x01) {
+		keycode = read_from_port(0x60);
+		if(keycode < 0)
+			return;
+
+		if(keycode == ENTER_KEY_CODE) {
+            //kprint_newline();
+            terminal_putchar('\n');
+			return;
+		}
+
+		/*vidptr[current_loc++] = keyboard_map[(unsigned char) keycode];
+		vidptr[current_loc++] = 0x07;*/
+		terminal_putchar(kmap[(unsigned long) keycode]);
+	}
 }
 
 void main_kernel(void){
     //terminal_initialize();
     //terminal_writestring("Enabling Keyboard support! \n");
     terminal_initialize();
-    terminal_writestring("hello\n");
+    //terminal_writestring("hello\n");
     //ierminal_writestring(r
     //clear_screen();
     init_idt();
