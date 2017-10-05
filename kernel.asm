@@ -20,6 +20,7 @@ read_from_port:
     mov edx, [esp+4]
     in al,dx
     ret
+    
 write_to_port:
     mov edx,[esp+4]
     mov al, [esp+4+4]

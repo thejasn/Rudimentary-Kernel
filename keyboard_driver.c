@@ -1,5 +1,5 @@
 #include "kmap.h"
-
+#include "terminal_init.c"
 #define LINES 25
 #define COLUMNS_PER_LINE 80
 #define BYTES_FOR_EACH_ELEMENT 2
@@ -15,8 +15,8 @@
 
 #define PIC1_DATA 0x21 
 #define PIC1_COMMAND 0x20
-#define PIC2_DATA 0xA0
-#define PIC2_COMMAND 0xA1
+#define PIC2_DATA 0xA1
+#define PIC2_COMMAND 0xA0
 
 #define ENTRY_KEY_CODE 0x1C
 
@@ -26,8 +26,8 @@ extern char read_from_port(unsigned short port);
 extern void write_to_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
 
-unsigned int current_cursor_location =0;
 
+unsigned int current_cursor_location =0;
 struct IDT_entry{
 
     unsigned short int offset_lowerbits; //offset of bits 0...15
@@ -48,7 +48,7 @@ struct IDT_entry{
 };
 typedef struct IDT_entry IDT_entry;
 IDT_entry IDT[IDT_SIZE];
-char *vid_buffer = (char*)0xb8000;
+//char *terminal_buffer = (char*)0xb8000;
 void init_idt(void)
 {
     unsigned long keyboard_address,idt_address,idt_ptr[2];
@@ -86,7 +86,7 @@ void init_idt(void)
     //ICW2 - need to remap the affset addresses of the IDT 
     // since the in intel x86 first 32 are reserved 
     write_to_port(PIC1_DATA,0x20); //0x20 = 32(10)
-    write_to_port(PIC2_DATA,0x20);
+    write_to_port(PIC2_DATA,0x28);
 
     //ICW3 - cascading i.e op as input to next
     //currently not using it so 0
@@ -124,21 +124,31 @@ void kprint_newline(void)
 void kb_init(void)
 {
     //0xFD is 11111101 enables only IRQ1 
-    write_to_port(PIC1_DATA,0xFD);
-}void clear_screen(void)
+    write_to_port(0x21,0xFD);
+}
+/*
+void clear_screen(void)
 {
 	unsigned int i = 0;
 	while (i < SCREEN_SIZE) {
-		vid_buffer[i++] = ' ';
-		vid_buffer[i++] = 0x07;
+		terminal_buffer[i++] = ' ';
+		terminal_buffer[i++] = 0x07;
 	}
 }
-void keyboard_handler_main()
+void kprint(const char *str)
+{
+	unsigned int i = 0;
+	while (str[i] != '\0') {
+		//vidptr[current_loc++] = str[i++];
+		//vidptr[current_loc++] = 0x07;
+	}
+}*/
+void keyboard_handler_main(void)
 {
     unsigned char status;
     char keycode;
 
-    write_to_port(PIC1_COMMAND,0x20);
+    write_to_port(0x20,0x20);
 
     status = read_from_port(K_STATUS_PORT);
     // lowest bit of status will be set if buffer is not empty
@@ -152,15 +162,19 @@ void keyboard_handler_main()
                 kprint_newline();
                 return;
             }
-            vid_buffer[current_cursor_location++] = keyboard_map[(unsigned char) keycode];
-            vid_buffer[current_cursor_location++]=0x07;
+         terminal_putchar(keyboard_map[(unsigned char)keycode]);
+         terminal_putchar(' ');
         
     }
 }
-void kernel(void){
+
+void main_kernel(void){
     //terminal_initialize();
     //terminal_writestring("Enabling Keyboard support! \n");
-    clear_screen();
+    terminal_initialize();
+    terminal_writestring("hello\n");
+    //ierminal_writestring(r
+    //clear_screen();
     init_idt();
     kb_init();
     while(1);
