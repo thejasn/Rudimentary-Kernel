@@ -1,3 +1,5 @@
+//#include "kmap.h"
+#include "keyboard_driver.c"
 enum  vga_color  {
 	VGA_COLOR_BLACK = 0,
 	VGA_COLOR_BLUE = 1,
@@ -36,7 +38,7 @@ static const int  VGA_WIDTH = 80;
 static const int  VGA_HEIGHT = 25;
 
 int  terminal_row,terminal_col;
-unsigned int terminal_color;
+unsigned int terminal_color,current_loc=0;
 unsigned int  * terminal_buffer;
 
 void terminal_initialize(void)
@@ -62,12 +64,16 @@ void terminal_putentryat(char c , unsigned int color, int  y, int  x)
     const int  index = y * VGA_WIDTH + x;
     terminal_buffer[index]=vga_entry(c,color);
 }
+void terminal_newline()
+{
+    terminal_col =0;
+    terminal_row+=1;
+}
 void terminal_putchar(char c)
 {
     if(c=='\n')
     {
-        terminal_col = 0;
-        terminal_row+=1;
+       terminal_newline();
         c=' ';
     }    
     terminal_putentryat(c,terminal_color,terminal_row,terminal_col);
@@ -86,11 +92,21 @@ void terminal_writestring(const char * data)
 {
     terminal_write(data,strlen(data));
 }
-#if defined(__cplusplus)
-extern "C"
-#endif
+
+/*void handle_keyboard_input(char keycode)
+{
+    if(keycode < 0)
+        return;
+    if(keycode == ENTRY_KEY_CODE)
+    {
+        terminal_newline();
+        return;
+    }
+    terminal_buffer[current_loc++] = keyboard_map[(unsigned char) keycode];
+    terminal_buffer[current_loc++]=0x07; 
+}
+/*/
 void main_kernel(void){
-    terminal_initialize();
-    terminal_writestring("Hello Kernel! \n");
-    terminal_writestring("\n Whats UPPPPP!!!");
+    kernel();
+    
 }
