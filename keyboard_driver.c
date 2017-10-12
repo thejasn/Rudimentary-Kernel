@@ -55,7 +55,7 @@ void init_idt(void)
     
     //populating the IDT entry of Keyboard's interrupt
 
-    keyboard_address = (unsigned long) keyboard_handler;
+    keyboard_address = (unsigned long) keyboard_handler; //it was typecasted to unsigned long... I fucked with it
     /*     Ports
 	*	     PIC1	PIC2
 	*Command 0x20	0xA0
@@ -165,7 +165,9 @@ void keyboard_handler_main(void)
 		}
 
 		/*vidptr[current_loc++] = keyboard_map[(unsigned char) keycode];
-		vidptr[current_loc++] = 0x07;*/
+        vidptr[current_loc++] = 0x07;*/
+        //printf("%x",keycode);
+        //terminal_putnum((unsigned long)keycode);
 		terminal_putchar(kmap[(unsigned long) keycode]);
 	}
 }
@@ -174,7 +176,6 @@ void main_kernel(void){
     //terminal_initialize();
     //terminal_writestring("Enabling Keyboard support! \n");
     terminal_initialize();
-    //terminal_writestring("hello\n");
     //ierminal_writestring(r
     //clear_screen();
     init_idt();
