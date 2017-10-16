@@ -108,9 +108,16 @@ void terminal_putchar(unsigned char c)
     {
         terminal_col +=4;
         terminal_putentryat(' ',terminal_color,terminal_row,terminal_col);
+        terminal_move_cursor();
         if( terminal_col == VGA_WIDTH)
             terminal_newline();
         return;
+    }
+    if( c == 0x0E)
+    {
+        terminal_col-=1;
+        terminal_putentryat(' ',terminal_color,terminal_row,terminal_col);
+        terminal_move_cursor();
     }
     if(c=='\n')
     {
