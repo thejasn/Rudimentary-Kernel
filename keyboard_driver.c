@@ -1,5 +1,8 @@
 #include "kmap.h"
-#include "terminal_init.c"
+#include "system.h"
+
+
+
 #define LINES 25
 #define COLUMNS_PER_LINE 80
 #define BYTES_FOR_EACH_ELEMENT 2
@@ -20,13 +23,16 @@
 
 #define ENTER_KEY_CODE 0x1C
 
+int command_ptr=0;
+unsigned char command[255];
 extern unsigned char keymap[128];
 extern void keyboard_handler(void);
 extern char read_from_port(unsigned short port);
 extern void write_to_port(unsigned short port, unsigned char data);
 extern void load_idt(unsigned long *idt_ptr);
 
-
+void process_command(char[]);
+void command_run(char[],char[]);
 unsigned int current_cursor_location =0;
 struct IDT_entry{
 
@@ -143,39 +149,148 @@ void kprint(const char *str)
 		//vidptr[current_loc++] = 0x07;
 	}
 }*/
+void process_command(char command_to_process[])
+{
+    //unsigned char * compare = "thejas";
+    
+
+    unsigned char command[255];
+    unsigned char arg[255];
+    int i,j,flag=0;
+    for(i=0;i<strlen(command_to_process);i++)
+    {    if(command_to_process[i]==' ')
+        {
+            for(j=0;j<strlen(command_to_process)-i;j++)
+                arg[j] = command_to_process[i+j+1];
+            flag = 1;
+            break;
+        }
+    }
+    for(i=0;i<strlen(command_to_process);i++)
+    {    if(command_to_process[i]!=' ')
+        {
+            command[i]=command_to_process[i];
+        }
+    }
+    if(flag==1)
+        command_run(command,arg);
+    else{
+        if(str_compare(command_to_process,"p"))
+            ret_convertor(RET_VAL);
+        else if(str_compare(command,"ls"))
+        {
+            RET_VAL = ls();
+        }
+        else if(str_compare(command_to_process,"pwd"))
+        {
+            RET_VAL = pwd();
+        }
+        else terminal_writestring(" No such command found! \n");
+    }
+    clear_str(command,'\0',strlen(command));
+    clear_str(arg,'\0',strlen(arg));
+    clear_str(command_to_process,'\0',strlen(command_to_process));
+}
+void command_run(char command[],char arg[])
+{
+    /*terminal_writestring(command);
+    terminal_writestring("!");
+    terminal_writestring("\n");
+
+    terminal_writestring(arg);
+    create_dir(arg);*/
+    if(str_compare(command,"mkdir"))
+    {    
+        RET_VAL = mkdir(arg);
+    }
+    else if(str_compare(command,"cd"))
+    {
+        RET_VAL = cd(arg);
+    }
+    else if(str_compare(command,"rmdir"))
+    {
+        RET_VAL = rmdir(arg);
+    }
+    else if(str_compare(command,"text"))
+    {
+        terminal_writestring("here\n");
+        RET_VAL = text(arg);
+    }
+    else terminal_writestring(" No such command found!! \n");
+    clear_str(command,'\0',strlen(command));
+    clear_str(arg,'\0',strlen(arg));
+    
+}
 void keyboard_handler_main(void)
 {
-	unsigned char status;
-	char keycode;
+    unsigned char status;
+    char keycode;
 
-	/* write EOI */
-	write_to_port(0x20, 0x20);
+    /* write EOI */
+    write_to_port(0x20, 0x20);
 
-	status = read_from_port(0x64);
-	/* Lowest bit of status will be set if buffer is not empty */
-	if (status & 0x01) {
-		keycode = read_from_port(0x60);
-		if(keycode < 0)
-			return;
+    status = read_from_port(0x64);
+    /* Lowest bit of status will be set if buffer is not empty */
+    if (status & 0x01)
+    {
+        keycode = read_from_port(0x60);
+        if (keycode < 0)
+            return;
 
-		if(keycode == ENTER_KEY_CODE) {
+        if (keycode == ENTER_KEY_CODE)
+        {
             //kprint_newline();
-            terminal_putchar('\n');
-			return;
-		}
 
-		/*vidptr[current_loc++] = keyboard_map[(unsigned char) keycode];
-        vidptr[current_loc++] = 0x07;*/
-        //printf("%x",keycode);
-        //terminal_putnum((unsigned long)keycode);
-		terminal_putchar(kmap[(unsigned long) keycode]);
-	}
+            terminal_putchar('\n');
+            //terminal_writestring(command);
+            //terminal_putchar('\n');
+            command_ptr = 0;
+            if (str_compare(command, "") == 1)
+            {
+                terminal_writestring("empty\n");
+                terminal_writestring(generate_prompt());
+                terminal_writestring(PROMPT);
+                clear_str(command, '\0', strlen(command));
+                return;
+            }
+            //terminal_writestring(command);
+
+            //terminal_putchar('\n');
+            process_command(command);
+            clear_str(command, '\0', strlen(command));
+            terminal_writestring(generate_prompt());
+            terminal_writestring(PROMPT);
+            clear_str(command, '\0', strlen(command));
+            return;
+        }
+        if (keycode == 0x4B)
+        {
+            terminal_col -= 1;
+            terminal_move_cursor();
+            return;
+        }
+        if (keycode == 0x4D)
+        {
+            terminal_col += 1;
+            terminal_move_cursor();
+            return;
+        }
+        //terminal_putchar(current);
+        char current = kmap[(unsigned long)keycode];
+        terminal_putchar(current);
+        if (current != '\b')
+            command[command_ptr++] = current;
+        else
+            command_ptr--;
+    }
 }
 
 void main_kernel(void){
     //terminal_initialize();
     //terminal_writestring("Enabling Keyboard support! \n");
     terminal_initialize();
+    terminal_writestring(generate_prompt());
+    terminal_writestring(PROMPT);
     //ierminal_writestring(r
     //clear_screen();
     init_idt();

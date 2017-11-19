@@ -16,6 +16,8 @@ global load_idt
 extern main_kernel
 extern keyboard_handler_main
 
+
+
 read_from_port:
     mov edx, [esp+4]
     in al,dx
@@ -46,3 +48,6 @@ start:
 section .bss
 resb 8192       ; 8KB for stack
 stack_space:
+
+
+

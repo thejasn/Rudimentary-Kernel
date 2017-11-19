@@ -1,4 +1,5 @@
 #include "system.h"
+
 enum  vga_color  {
 	VGA_COLOR_BLACK = 0,
 	VGA_COLOR_BLUE = 1,
@@ -17,6 +18,8 @@ enum  vga_color  {
 	VGA_COLOR_LIGHT_BROWN = 14,
 	VGA_COLOR_WHITE = 15,
 };
+
+void terminal_putchar(unsigned char);
 //unsigned int current_cursor_location =0;
 static inline unsigned char vga_entry_color(enum vga_color  fg,enum vga_color  bg)
 {
@@ -26,13 +29,7 @@ static inline unsigned short  vga_entry(unsigned char uc, unsigned char color)
 {
     return (unsigned short)uc | (unsigned short ) color<<8;
 }
-int  strlen(const char * str)
-{
-    int  len =0;
-    while(str[len])
-        len++;
-    return len;
-}
+
 static const int  VGA_WIDTH = 80;
 static const int  VGA_HEIGHT = 25;
 
@@ -52,6 +49,7 @@ void terminal_initialize(void)
                 const int  index = y * VGA_WIDTH +  x;
                 terminal_buffer[index] = vga_entry(' ',terminal_color);
         }
+    
 }
 
 void terminal_setcolor(unsigned char color)
@@ -60,6 +58,7 @@ void terminal_setcolor(unsigned char color)
 }
 void terminal_putentryat(unsigned char c , unsigned char color, int  y, int  x)
 {
+    
     const int  index = y * VGA_WIDTH + x;
     terminal_buffer[index]=vga_entry(c,color);
     terminal_col++;
@@ -102,6 +101,17 @@ void terminal_scroll(void)
 
     }
 }
+
+void terminal_write(const unsigned char * data , int  size)
+{
+    for( int  i = 0 ; i< size;i++)
+        terminal_putchar(data[i]);
+    //current_cursor_location+=size;
+}
+void terminal_writestring(const unsigned char * data)
+{
+    terminal_write(data,strlen(data));
+}
 void terminal_putchar(unsigned char c)
 {
     if(c == 0x09) // if tab is pressed
@@ -113,17 +123,21 @@ void terminal_putchar(unsigned char c)
             terminal_newline();
         return;
     }
-    if( c == 0x0E)
+    if( c == '\b')
     {
         terminal_col-=1;
+        //terminal_writestring("in");
         terminal_putentryat(' ',terminal_color,terminal_row,terminal_col);
         terminal_move_cursor();
+        terminal_col-=1;
+        terminal_move_cursor();
+        //terminal_putentryat(' ',terminal_color,terminal_row,terminal_col);
+        return;
     }
     if(c=='\n')
     {
        terminal_col=0;
        terminal_row+=1;
-      
     }    
     else
         terminal_putentryat(c,terminal_color,terminal_row,terminal_col);
@@ -131,17 +145,6 @@ void terminal_putchar(unsigned char c)
     terminal_scroll();
     terminal_move_cursor();
 
-}
-
-void terminal_write(const unsigned char * data , int  size)
-{
-    for( int  i = 0 ; i< size;i++)
-        terminal_putchar(data[i]);
-    //current_cursor_location+=size;
-}
-void terminal_writestring(const unsigned char * data)
-{
-    terminal_write(data,strlen(data));
 }
 
 
